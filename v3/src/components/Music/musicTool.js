@@ -1,0 +1,200 @@
+import { reqMusicDetail, reqMusicDescription, reqMusicLyricById } from "@/api/music";
+
+export const musicKey = "blog-music-player";
+
+// 转码
+export const Base64 = {
+  encode: function (v) {
+    return window.btoa(window.encodeURIComponent(v));
+  },
+  decode: function (v) {
+    return window.decodeURIComponent(window.atob(v));
+  },
+};
+
+export const _setLocalItem = function (key, value) {
+  try {
+    if (key === "" || key === undefined) {
+      return;
+    }
+    if (key) {
+      if (value == 0) {
+        value = JSON.stringify(value);
+        localStorage.setItem(Base64.encode(key));
+        return;
+      }
+      if (value === null || value === undefined || value === "") {
+        return "";
+      }
+      // 编码
+      let enObj = JSON.stringify(value);
+      localStorage.setItem(Base64.encode(key), Base64.encode(enObj));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+export const _getLocalItem = function (key) {
+  try {
+    if (key === null || key === "" || key === undefined) {
+      return "";
+    }
+    if (key) {
+      let value = localStorage.getItem(Base64.encode(key));
+      if (value === null || value === undefined || value === "") {
+        return "";
+      } else {
+        value = Base64.decode(value);
+        return JSON.parse(value);
+      }
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+export const MODELLIST = [
+  "RANDOM", // 随机
+  "LISTLOOP", // 列表循环
+  "SINGLECYCLE", // 单曲循环
+];
+
+export const PLAYTYPE = {
+  CUSTOM: "CUSTOM", // 播放用户添加的歌曲
+  TOP: "TOP", // 当前歌曲排行榜列表歌曲
+};
+
+export const LYRICTYPE = {
+  COMMON: "COMMON",
+  SPECIAL: "SPECIAL",
+};
+
+const returnRandomNoRepeat = (index, len) => {
+  if (len == 1) {
+    return index;
+  }
+  let res = Math.floor(Math.random() * (len - 0) + 0);
+
+  if (res == index) {
+    returnRandomNoRepeat(index);
+  } else {
+    return res;
+  }
+};
+export function getNextMusic(len, index, playType, isPlayNext) {
+  let newIndex = 0;
+  switch (playType) {
+    // 随机
+    case "RANDOM":
+      newIndex = returnRandomNoRepeat(index, len);
+      if (newIndex == index) {
+        newIndex = returnRandomNoRepeat(index, len);
+      }
+      break;
+    // 列表循环
+    case "LISTLOOP":
+      if (isPlayNext) {
+        if (index == len - 1) {
+          newIndex = 0;
+        } else if (index != -1) {
+          newIndex = index + 1;
+        } else {
+          newIndex = 0;
+        }
+      } else {
+        if (index == 0) {
+          newIndex = len - 1;
+        } else if (index != -1) {
+          newIndex = index - 1;
+        } else {
+          newIndex = 0;
+        }
+      }
+      break;
+    // 单曲循环
+    case "SINGLECYCLE":
+      newIndex = index;
+      break;
+  }
+
+  return newIndex;
+}
+
+/**
+ * 给小于10的数字 + 0
+ * @param {*} time
+ * @returns time
+ */
+export function addZero(time) {
+  if (time >= 0 && time < 10) {
+    time = "0" + time;
+  }
+  return time;
+}
+
+export function calcMusicTime(time) {
+  // 这里就按照分和秒来
+  let minutes = 0,
+    second = 0;
+
+  if (!time) {
+    return `${addZero(minutes)}:${addZero(second)}`;
+  }
+
+  minutes = Math.floor(time / 60);
+  second = Math.floor(time % 60);
+  return `${addZero(minutes)}:${addZero(second)}`;
+}
+
+export function calcMusicSchedule(current, duration) {
+  return Math.round((current / duration) * 10000) / 100;
+}
+
+export function calcMusicCurrentTime(progress, duration) {
+  return Math.round(progress * duration) / 100;
+}
+
+/**
+ * 根据歌曲id获取歌曲详情
+ * @param {*} id
+ */
+export const getMusicDetail = async (id) => {
+  const res = await reqMusicDetail({
+    id,
+    level: "exhigh",
+  });
+  if (res.code == 200) {
+    // 设置音乐详情 播放器通过监听音乐的id 进行音乐播放
+    return res.data[0];
+  }
+};
+
+export const getMusicDescription = async (id) => {
+  const res = await reqMusicDescription(id);
+  if (res.code == 200) {
+    // 设置音乐详情 播放器通过监听音乐的id 进行音乐播放
+    return res.songs;
+  }
+};
+
+export const getLyric = async (id) => {
+  const res = await reqMusicLyricById(id);
+  if (res.code == 200) {
+    let lyricArr = res.lrc.lyric.split("\n");
+    const notNullLyricArr = [];
+    const timeList = [];
+    lyricArr.forEach((v) => {
+      let arr = v.split("]");
+      let timeArr = arr[0].replace("[", "").split(":");
+      if (arr[1] && arr[0]) {
+        // 不为空才收集歌词
+        timeList.push((timeArr[0] - 0) * 1000 * 60 + (timeArr[1] - 0) * 1000);
+        notNullLyricArr.push(arr[1]);
+      }
+    });
+    return {
+      lyricList: notNullLyricArr, // 歌词列表
+      lyricTimeList: timeList, // 歌词时间列表
+    };
+  }
+};

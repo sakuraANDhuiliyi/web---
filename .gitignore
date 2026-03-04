@@ -1,0 +1,25 @@
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/dist-ssr/
+
+# Environment and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# IDE and system
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+**/*.log
+
+# Temp and cache
+**/.cache/
+**/.temp/
+**/coverage/
